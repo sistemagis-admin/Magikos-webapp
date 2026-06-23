@@ -1,0 +1,28 @@
+{
+  "name": "kost-sistemagis-be",
+  "version": "1.0.0",
+  "description": "Backend Manajemen Kos dengan Fastify dan TypeScript",
+  "main": "server.ts",
+  "scripts": {
+    "dev": "tsx watch server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@better-auth/prisma-adapter": "^1.6.20",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "better-auth": "^1.6.20",
+    "fastify": "^5.0.0",
+    "fastify-plugin": "^5.0.0",
+    "mqtt": "^5.0.0",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.20.0",
+    "prisma": "^7.8.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}
