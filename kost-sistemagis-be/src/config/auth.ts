@@ -1,11 +1,15 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { admin } from "better-auth/plugins";
 import { prisma } from "../plugins/database";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
-    provider: "postgresql",
+    provider: "sqlite",
   }),
+  plugins: [
+    admin()
+  ],
   secret: process.env.BETTER_AUTH_SECRET || "a-very-secure-secret-key-of-at-least-32-chars",
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
   socialProviders: {

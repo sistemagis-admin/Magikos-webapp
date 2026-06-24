@@ -1,8 +1,7 @@
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
 import { PrismaClient } from '../generated/prisma';
-import { Pool } from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -10,15 +9,14 @@ declare module 'fastify' {
   }
 }
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/mydb' });
-const adapter = new PrismaPg(pool);
+const adapter = new PrismaBetterSqlite3({ url: 'dev.db' });
 export const prisma = new PrismaClient({ adapter });
 
 const databasePlugin: FastifyPluginAsync = async (fastify, options) => {
   try {
     // Membuka koneksi database
     await prisma.$connect();
-    fastify.log.info('Database PostgreSQL connected via Prisma');
+    fastify.log.info('Database SQLite connected via Prisma');
 
     // Menambahkan PrismaClient ke instance Fastify
     fastify.decorate('db', prisma);
@@ -28,7 +26,7 @@ const databasePlugin: FastifyPluginAsync = async (fastify, options) => {
       await prisma.$disconnect();
     });
   } catch (error) {
-    fastify.log.error(`Failed to connect to database via Prisma: ${error}`);
+    fastify.log.error(error as Error, 'Failed to connect to database via Prisma');
     throw error;
   }
 };

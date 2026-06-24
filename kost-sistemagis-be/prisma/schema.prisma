@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 model User {
@@ -18,10 +18,55 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  
+  role          String?   @default("user")
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  roleId        String?
+  roleRelation  Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+
   sessions      Session[]
   accounts      Account[]
 
   @@map("user")
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  permissions RolePermission[]
+  users       User[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("role")
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  action      String
+  resource    String
+  description String?
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([action, resource])
+  @@map("permission")
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([roleId, permissionId])
+  @@map("role_permission")
 }
 
 model Session {
@@ -67,4 +112,67 @@ model Verification {
   updatedAt  DateTime? @updatedAt
 
   @@map("verification")
+}
+
+model Room {
+  id           String    @id @default(cuid())
+  number       String    @unique
+  status       String    // "OCCUPIED" | "AVAILABLE"
+  monthlyPrice Float
+  residents    Resident[]
+  payments     Payment[]
+
+  @@map("room")
+}
+
+model Resident {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  avatarUrl String?
+  roomId    String
+  room      Room      @relation(fields: [roomId], references: [id])
+  rfidLogs  RfidLog[]
+  payments  Payment[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("resident")
+}
+
+model RfidLog {
+  id         String    @id @default(cuid())
+  residentId String?
+  resident   Resident? @relation(fields: [residentId], references: [id], onDelete: SetNull)
+  deviceName String    // e.g., "Main Entrance", "Laundry Area"
+  status     String    // "SUCCESS" | "DENIED"
+  timestamp  DateTime  @default(now())
+
+  @@map("rfid_log")
+}
+
+model Payment {
+  id            String    @id @default(cuid())
+  residentId    String
+  resident      Resident  @relation(fields: [residentId], references: [id])
+  roomId        String
+  room          Room      @relation(fields: [roomId], references: [id])
+  type          String    // "RENT" | "LAUNDRY" | "ELECTRICITY" | "OTHER"
+  amount        Float
+  paymentMethod String?   // "TRANSFER" | "CREDIT_CARD" | "CASH"
+  status        String    // "PAID" | "PENDING" | "FAILED"
+  dueDate       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("payment")
+}
+
+model SystemAlert {
+  id        String   @id @default(cuid())
+  type      String   // "WARNING" | "INFO" | "DANGER"
+  message   String
+  timestamp DateTime @default(now())
+
+  @@map("system_alert")
 }
