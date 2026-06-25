@@ -28,6 +28,8 @@ model User {
 
   sessions      Session[]
   accounts      Account[]
+  residents     Resident[]
+  kostManagers  KostManager[]
 
   @@map("user")
 }
@@ -114,28 +116,89 @@ model Verification {
   @@map("verification")
 }
 
+model Kost {
+  id              String   @id @default(cuid())
+  name            String   // Nama Kost (e.g., Kost Mawar)
+  type            String   // "PUTRA" | "PUTRI" | "CAMPUR" or any custom string
+  description     String?
+  address         String   // Alamat Lengkap
+  city            String?
+  province        String?
+  postalCode      String?
+  contactName     String?  // Nama Pengelola
+  contactPhone    String?
+  bankName        String?  // Bank tujuan transfer (BCA, Mandiri, dll)
+  bankAccount     String?  // Nomor Rekening
+  bankAccountName String?  // Atas Nama Rekening
+  imageUrl        String?  // Foto bangunan kost
+
+  rooms           Room[]
+  residents       Resident[]
+  payments        Payment[]
+  rfidLogs        RfidLog[]
+  systemAlerts    SystemAlert[]
+  managers        KostManager[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("kost")
+}
+
+model KostManager {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kostId    String
+  kost      Kost     @relation(fields: [kostId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, kostId])
+  @@map("kost_manager")
+}
+
 model Room {
   id           String    @id @default(cuid())
-  number       String    @unique
+  number       String
   status       String    // "OCCUPIED" | "AVAILABLE"
   monthlyPrice Float
+  kostId       String
+  kost         Kost      @relation(fields: [kostId], references: [id], onDelete: Cascade)
   residents    Resident[]
   payments     Payment[]
 
+  @@unique([kostId, number])
   @@map("room")
 }
 
 model Resident {
-  id        String    @id @default(cuid())
-  name      String
-  email     String    @unique
-  avatarUrl String?
-  roomId    String
-  room      Room      @relation(fields: [roomId], references: [id])
-  rfidLogs  RfidLog[]
-  payments  Payment[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                       String    @id @default(cuid())
+  name                     String
+  email                    String?   @unique
+  phone                    String?
+  nik                      String?
+  gender                   String?   // "MALE" | "FEMALE"
+  placeOfBirth             String?
+  dateOfBirth              DateTime?
+  identityAddress          String?
+  occupation               String?
+  institution              String?
+  emergencyContactName     String?
+  emergencyContactRelation String?
+  emergencyContactPhone    String?
+  ktpUrl                   String?
+  avatarUrl                String?
+  
+  roomId                   String?
+  room                     Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  userId                   String?
+  user                     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  kostId                   String
+  kost                     Kost      @relation(fields: [kostId], references: [id], onDelete: Cascade)
+  
+  rfidLogs                 RfidLog[]
+  payments                 Payment[]
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   @@map("resident")
 }
@@ -144,6 +207,8 @@ model RfidLog {
   id         String    @id @default(cuid())
   residentId String?
   resident   Resident? @relation(fields: [residentId], references: [id], onDelete: SetNull)
+  kostId     String
+  kost       Kost      @relation(fields: [kostId], references: [id], onDelete: Cascade)
   deviceName String    // e.g., "Main Entrance", "Laundry Area"
   status     String    // "SUCCESS" | "DENIED"
   timestamp  DateTime  @default(now())
@@ -157,6 +222,8 @@ model Payment {
   resident      Resident  @relation(fields: [residentId], references: [id])
   roomId        String
   room          Room      @relation(fields: [roomId], references: [id])
+  kostId        String
+  kost          Kost      @relation(fields: [kostId], references: [id], onDelete: Cascade)
   type          String    // "RENT" | "LAUNDRY" | "ELECTRICITY" | "OTHER"
   amount        Float
   paymentMethod String?   // "TRANSFER" | "CREDIT_CARD" | "CASH"
@@ -170,6 +237,8 @@ model Payment {
 
 model SystemAlert {
   id        String   @id @default(cuid())
+  kostId    String?
+  kost      Kost?    @relation(fields: [kostId], references: [id], onDelete: Cascade)
   type      String   // "WARNING" | "INFO" | "DANGER"
   message   String
   timestamp DateTime @default(now())

@@ -2,11 +2,11 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../plugins/database';
 
 export const getResidents = async (
-  req: FastifyRequest<{ Querystring: { page?: string; limit?: string; search?: string; roomId?: string } }>,
+  req: FastifyRequest<{ Querystring: { page?: string; limit?: string; search?: string; roomId?: string; kostId?: string } }>,
   reply: FastifyReply
 ) => {
   try {
-    const { page = '1', limit = '10', search, roomId } = req.query;
+    const { page = '1', limit = '10', search, roomId, kostId } = req.query;
 
     const pageNum = parseInt(page, 10) > 0 ? parseInt(page, 10) : 1;
     const limitNum = parseInt(limit, 10) > 0 ? parseInt(limit, 10) : 10;
@@ -21,6 +21,9 @@ export const getResidents = async (
     }
     if (roomId) {
       whereClause.roomId = roomId;
+    }
+    if (kostId) {
+      whereClause.kostId = kostId;
     }
 
     const [residents, total] = await Promise.all([
@@ -76,51 +79,73 @@ export const getResident = async (
   }
 };
 
+interface ResidentBody {
+  name: string;
+  email?: string;
+  phone?: string;
+  nik?: string;
+  gender?: string;
+  placeOfBirth?: string;
+  dateOfBirth?: string;
+  identityAddress?: string;
+  occupation?: string;
+  institution?: string;
+  emergencyContactName?: string;
+  emergencyContactRelation?: string;
+  emergencyContactPhone?: string;
+  ktpUrl?: string;
+  avatarUrl?: string;
+  roomId?: string;
+  userId?: string;
+  kostId: string;
+}
+
 export const createResident = async (
-  req: FastifyRequest<{ Body: { name: string; email: string; avatarUrl?: string; roomId: string } }>,
+  req: FastifyRequest<{ Body: ResidentBody }>,
   reply: FastifyReply
 ) => {
   try {
-    const { name, email, avatarUrl, roomId } = req.body;
+    const data = req.body;
 
-    if (!name || !email || !roomId) {
-      return reply.status(400).send({ success: false, message: 'Name, email, and roomId are required' });
+    if (!data.name || !data.kostId) {
+      return reply.status(400).send({ success: false, message: 'Name and kostId are required' });
     }
 
-    // Check if room exists
-    const room = await prisma.room.findUnique({
-      where: { id: roomId }
-    });
-    if (!room) {
-      return reply.status(404).send({ success: false, message: 'Assigned room not found' });
+    // Check if room exists if roomId is provided
+    if (data.roomId) {
+      const room = await prisma.room.findUnique({
+        where: { id: data.roomId }
+      });
+      if (!room) {
+        return reply.status(404).send({ success: false, message: 'Assigned room not found' });
+      }
     }
 
     // Check email uniqueness
-    const existingResident = await prisma.resident.findUnique({
-      where: { email }
-    });
-    if (existingResident) {
-      return reply.status(400).send({ success: false, message: `Resident with email ${email} already exists` });
+    if (data.email) {
+      const existingEmail = await prisma.resident.findUnique({ where: { email: data.email } });
+      if (existingEmail) {
+        return reply.status(400).send({ success: false, message: `Resident with email ${data.email} already exists` });
+      }
     }
+
+
 
     // Transaction to create resident and set room status to OCCUPIED
     const resident = await prisma.$transaction(async (tx) => {
       const newResident = await tx.resident.create({
-        data: {
-          name,
-          email,
-          avatarUrl,
-          roomId
-        },
+        data,
         include: {
           room: true
         }
       });
 
-      await tx.room.update({
-        where: { id: roomId },
-        data: { status: 'OCCUPIED' }
-      });
+      if (data.roomId) {
+        await tx.room.update({
+          where: { id: data.roomId },
+          data: { status: 'OCCUPIED' }
+        });
+      }
 
       return newResident;
     });
@@ -133,12 +158,12 @@ export const createResident = async (
 };
 
 export const updateResident = async (
-  req: FastifyRequest<{ Params: { id: string }; Body: { name?: string; email?: string; avatarUrl?: string; roomId?: string } }>,
+  req: FastifyRequest<{ Params: { id: string }; Body: Partial<ResidentBody> }>,
   reply: FastifyReply
 ) => {
   try {
     const { id } = req.params;
-    const { name, email, avatarUrl, roomId } = req.body;
+    const data = req.body;
 
     const resident = await prisma.resident.findUnique({
       where: { id }
@@ -149,19 +174,21 @@ export const updateResident = async (
     }
 
     // Verify email if changing
-    if (email && email !== resident.email) {
+    if (data.email && data.email !== resident.email) {
       const emailTaken = await prisma.resident.findUnique({
-        where: { email }
+        where: { email: data.email }
       });
       if (emailTaken) {
-        return reply.status(400).send({ success: false, message: `Email ${email} is already taken` });
+        return reply.status(400).send({ success: false, message: `Email ${data.email} is already taken` });
       }
     }
 
+
+
     // Verify room if changing
-    if (roomId && roomId !== resident.roomId) {
+    if (data.roomId && data.roomId !== resident.roomId) {
       const room = await prisma.room.findUnique({
-        where: { id: roomId }
+        where: { id: data.roomId }
       });
       if (!room) {
         return reply.status(404).send({ success: false, message: 'New assigned room not found' });
@@ -173,26 +200,35 @@ export const updateResident = async (
 
       const res = await tx.resident.update({
         where: { id },
-        data: {
-          name,
-          email,
-          avatarUrl,
-          roomId
-        },
+        data,
         include: {
           room: true
         }
       });
 
       // If room changed, handle transitions
-      if (roomId && roomId !== oldRoomId) {
+      if (data.roomId && data.roomId !== oldRoomId) {
         // 1. Mark new room occupied
         await tx.room.update({
-          where: { id: roomId },
+          where: { id: data.roomId },
           data: { status: 'OCCUPIED' }
         });
 
         // 2. Check if old room has any residents left
+        if (oldRoomId) {
+          const residentsInOldRoom = await tx.resident.count({
+            where: { roomId: oldRoomId }
+          });
+
+          if (residentsInOldRoom === 0) {
+            await tx.room.update({
+              where: { id: oldRoomId },
+              data: { status: 'AVAILABLE' }
+            });
+          }
+        }
+      } else if (data.roomId === null && oldRoomId) {
+        // if room is removed completely
         const residentsInOldRoom = await tx.resident.count({
           where: { roomId: oldRoomId }
         });
@@ -249,15 +285,17 @@ export const deleteResident = async (
       });
 
       // Check if room has any remaining residents
-      const remainingResidents = await tx.resident.count({
-        where: { roomId }
-      });
-
-      if (remainingResidents === 0) {
-        await tx.room.update({
-          where: { id: roomId },
-          data: { status: 'AVAILABLE' }
+      if (roomId) {
+        const remainingResidents = await tx.resident.count({
+          where: { roomId }
         });
+
+        if (remainingResidents === 0) {
+          await tx.room.update({
+            where: { id: roomId },
+            data: { status: 'AVAILABLE' }
+          });
+        }
       }
     });
 

@@ -2,11 +2,11 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../plugins/database';
 
 export const getRooms = async (
-  req: FastifyRequest<{ Querystring: { page?: string; limit?: string; search?: string; status?: string } }>,
+  req: FastifyRequest<{ Querystring: { page?: string; limit?: string; search?: string; status?: string; kostId?: string } }>,
   reply: FastifyReply
 ) => {
   try {
-    const { page = '1', limit = '10', search, status } = req.query;
+    const { page = '1', limit = '10', search, status, kostId } = req.query;
 
     const pageNum = parseInt(page, 10) > 0 ? parseInt(page, 10) : 1;
     const limitNum = parseInt(limit, 10) > 0 ? parseInt(limit, 10) : 10;
@@ -18,6 +18,9 @@ export const getRooms = async (
     }
     if (status) {
       whereClause.status = status;
+    }
+    if (kostId) {
+      whereClause.kostId = kostId;
     }
 
     const [rooms, total] = await Promise.all([
@@ -81,11 +84,11 @@ export const getRoom = async (
 };
 
 export const createRoom = async (
-  req: FastifyRequest<{ Body: { number: string; status?: string; monthlyPrice: number } }>,
+  req: FastifyRequest<{ Body: { number: string; status?: string; monthlyPrice: number; kostId: string } }>,
   reply: FastifyReply
 ) => {
   try {
-    const { number, status = 'AVAILABLE', monthlyPrice } = req.body;
+    const { number, status = 'AVAILABLE', monthlyPrice, kostId } = req.body;
 
     if (!number) {
       return reply.status(400).send({ success: false, message: 'Room number is required' });
@@ -93,21 +96,25 @@ export const createRoom = async (
     if (monthlyPrice === undefined || monthlyPrice === null) {
       return reply.status(400).send({ success: false, message: 'Monthly price is required' });
     }
+    if (!kostId) {
+      return reply.status(400).send({ success: false, message: 'kostId is required' });
+    }
 
-    // Check if room number already exists
+    // Check if room number already exists in this kost
     const existingRoom = await prisma.room.findUnique({
-      where: { number }
+      where: { kostId_number: { kostId, number } }
     });
 
     if (existingRoom) {
-      return reply.status(400).send({ success: false, message: `Room with number ${number} already exists` });
+      return reply.status(400).send({ success: false, message: `Room with number ${number} already exists in this kost` });
     }
 
     const room = await prisma.room.create({
       data: {
         number,
         status,
-        monthlyPrice: parseFloat(monthlyPrice as any)
+        monthlyPrice: parseFloat(monthlyPrice as any),
+        kostId
       }
     });
 
@@ -119,12 +126,12 @@ export const createRoom = async (
 };
 
 export const updateRoom = async (
-  req: FastifyRequest<{ Params: { id: string }; Body: { number?: string; status?: string; monthlyPrice?: number } }>,
+  req: FastifyRequest<{ Params: { id: string }; Body: { number?: string; status?: string; monthlyPrice?: number; kostId?: string } }>,
   reply: FastifyReply
 ) => {
   try {
     const { id } = req.params;
-    const { number, status, monthlyPrice } = req.body;
+    const { number, status, monthlyPrice, kostId } = req.body;
 
     const existingRoom = await prisma.room.findUnique({
       where: { id }
@@ -134,13 +141,15 @@ export const updateRoom = async (
       return reply.status(404).send({ success: false, message: 'Room not found' });
     }
 
-    // If changing room number, check uniqueness
-    if (number && number !== existingRoom.number) {
+    // If changing room number or kostId, check uniqueness
+    if ((number && number !== existingRoom.number) || (kostId && kostId !== existingRoom.kostId)) {
+      const kostIdToUse = kostId || existingRoom.kostId;
+      const numberToUse = number || existingRoom.number;
       const roomNumberTaken = await prisma.room.findUnique({
-        where: { number }
+        where: { kostId_number: { kostId: kostIdToUse, number: numberToUse } }
       });
       if (roomNumberTaken) {
-        return reply.status(400).send({ success: false, message: `Room with number ${number} already exists` });
+        return reply.status(400).send({ success: false, message: `Room with number ${numberToUse} already exists in this kost` });
       }
     }
 
@@ -149,7 +158,8 @@ export const updateRoom = async (
       data: {
         number,
         status,
-        monthlyPrice: monthlyPrice !== undefined ? parseFloat(monthlyPrice as any) : undefined
+        monthlyPrice: monthlyPrice !== undefined ? parseFloat(monthlyPrice as any) : undefined,
+        kostId
       }
     });
 

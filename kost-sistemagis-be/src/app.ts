@@ -13,6 +13,7 @@ import roleRoutes from './routes/api/v1/role.route';
 import permissionRoutes from './routes/api/v1/permission.route';
 import roomRoutes from './routes/api/v1/room.route';
 import residentRoutes from './routes/api/v1/resident.route';
+import kostRoutes from './routes/api/v1/kost.route';
 import { env } from './config/env';
 import fastifyCors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
@@ -111,6 +112,7 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   app.register(permissionRoutes, { prefix: '/api/v1/permissions' });
   app.register(roomRoutes, { prefix: '/api/v1/rooms' });
   app.register(residentRoutes, { prefix: '/api/v1/residents' });
+  app.register(kostRoutes, { prefix: '/api/v1/kosts' });
 
   return app;
 }
