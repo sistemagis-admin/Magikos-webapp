@@ -4,7 +4,8 @@ import { env } from './src/config/env';
 
 const app = buildApp({
   logger: {
-    level: 'info'
+    level: 'info',
+    redact: ['req.headers.authorization', 'req.headers.cookie', 'body.password', 'body.token']
   }
 });
 

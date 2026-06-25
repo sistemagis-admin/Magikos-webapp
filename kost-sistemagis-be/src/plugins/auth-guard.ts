@@ -25,6 +25,21 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply) {
       });
     }
 
+    // Periksa apakah user sudah di-ban
+    const user = session.user as any;
+    if (user.banned === true) {
+      const banExpires = user.banExpires ? new Date(user.banExpires) : null;
+      // Jika masa ban sudah habis, izinkan masuk (ban expired)
+      if (!banExpires || banExpires > new Date()) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: user.banReason
+            ? `Akun Anda dinonaktifkan. Alasan: ${user.banReason}`
+            : 'Akun Anda telah dinonaktifkan oleh administrator.'
+        });
+      }
+    }
+
     req.session = session;
   } catch (error) {
     req.log.error(error as Error, 'Auth Guard Error');

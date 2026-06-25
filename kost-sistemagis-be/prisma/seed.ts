@@ -45,6 +45,14 @@ async function main() {
     { action: "write", resource: "role" },
     { action: "manage", resource: "permission" },
     { action: "read", resource: "permission" },
+    { action: "manage", resource: "room" },
+    { action: "read", resource: "room" },
+    { action: "write", resource: "room" },
+    { action: "manage", resource: "resident" },
+    { action: "read", resource: "resident" },
+    { action: "write", resource: "resident" },
+    { action: "read", resource: "dashboard" },   // Akses lihat dashboard
+    { action: "manage", resource: "iot" },        // Akses kontrol IoT/RFID
   ];
 
   for (const p of permissions) {
