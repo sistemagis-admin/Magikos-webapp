@@ -54,8 +54,7 @@ export const getRooms = async (
       }
     });
   } catch (error) {
-    req.log.error(error as Error, 'Error fetching rooms');
-    return reply.status(500).send({ success: false, message: 'Failed to fetch rooms' });
+    throw error;
   }
 };
 
@@ -73,13 +72,18 @@ export const getRoom = async (
     });
 
     if (!room) {
-      return reply.status(404).send({ success: false, message: 'Room not found' });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'ROOM_NOT_FOUND',
+          message: 'The requested room could not be found.'
+        }
+      });
     }
 
     return reply.send({ success: true, data: room });
   } catch (error) {
-    req.log.error(error as Error, 'Error fetching room');
-    return reply.status(500).send({ success: false, message: 'Failed to fetch room' });
+    throw error;
   }
 };
 
@@ -90,23 +94,19 @@ export const createRoom = async (
   try {
     const { number, status = 'AVAILABLE', monthlyPrice, kostId } = req.body;
 
-    if (!number) {
-      return reply.status(400).send({ success: false, message: 'Room number is required' });
-    }
-    if (monthlyPrice === undefined || monthlyPrice === null) {
-      return reply.status(400).send({ success: false, message: 'Monthly price is required' });
-    }
-    if (!kostId) {
-      return reply.status(400).send({ success: false, message: 'kostId is required' });
-    }
-
     // Check if room number already exists in this kost
     const existingRoom = await prisma.room.findUnique({
       where: { kostId_number: { kostId, number } }
     });
 
     if (existingRoom) {
-      return reply.status(400).send({ success: false, message: `Room with number ${number} already exists in this kost` });
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'ROOM_NUMBER_TAKEN',
+          message: `Room with number ${number} already exists in this kost.`
+        }
+      });
     }
 
     const room = await prisma.room.create({
@@ -120,8 +120,7 @@ export const createRoom = async (
 
     return reply.status(201).send({ success: true, data: room });
   } catch (error) {
-    req.log.error(error as Error, 'Error creating room');
-    return reply.status(500).send({ success: false, message: 'Failed to create room' });
+    throw error;
   }
 };
 
@@ -138,7 +137,13 @@ export const updateRoom = async (
     });
 
     if (!existingRoom) {
-      return reply.status(404).send({ success: false, message: 'Room not found' });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'ROOM_NOT_FOUND',
+          message: 'The requested room could not be found.'
+        }
+      });
     }
 
     // If changing room number or kostId, check uniqueness
@@ -149,7 +154,13 @@ export const updateRoom = async (
         where: { kostId_number: { kostId: kostIdToUse, number: numberToUse } }
       });
       if (roomNumberTaken) {
-        return reply.status(400).send({ success: false, message: `Room with number ${numberToUse} already exists in this kost` });
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: 'ROOM_NUMBER_TAKEN',
+            message: `Room with number ${numberToUse} already exists in this kost.`
+          }
+        });
       }
     }
 
@@ -165,8 +176,7 @@ export const updateRoom = async (
 
     return reply.send({ success: true, data: updatedRoom });
   } catch (error) {
-    req.log.error(error as Error, 'Error updating room');
-    return reply.status(500).send({ success: false, message: 'Failed to update room' });
+    throw error;
   }
 };
 
@@ -186,20 +196,32 @@ export const deleteRoom = async (
     });
 
     if (!room) {
-      return reply.status(404).send({ success: false, message: 'Room not found' });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'ROOM_NOT_FOUND',
+          message: 'The requested room could not be found.'
+        }
+      });
     }
 
     if (room.residents.length > 0) {
       return reply.status(400).send({
         success: false,
-        message: 'Cannot delete room because it still has active residents.'
+        error: {
+          code: 'ACTIVE_RESIDENTS_PRESENT',
+          message: 'Cannot delete room because it still has active residents.'
+        }
       });
     }
 
     if (room.payments.length > 0) {
       return reply.status(400).send({
         success: false,
-        message: 'Cannot delete room because it has payment history records.'
+        error: {
+          code: 'PAYMENT_HISTORY_PRESENT',
+          message: 'Cannot delete room because it has payment history records.'
+        }
       });
     }
 
@@ -207,9 +229,13 @@ export const deleteRoom = async (
       where: { id }
     });
 
-    return reply.send({ success: true, message: 'Room deleted successfully' });
+    return reply.send({
+      success: true,
+      data: {
+        message: 'Room deleted successfully.'
+      }
+    });
   } catch (error) {
-    req.log.error(error as Error, 'Error deleting room');
-    return reply.status(500).send({ success: false, message: 'Failed to delete room' });
+    throw error;
   }
 };

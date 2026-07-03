@@ -8,8 +8,7 @@ export const getKosts = async (req: FastifyRequest, reply: FastifyReply) => {
     });
     return reply.send({ success: true, data: kosts });
   } catch (error) {
-    req.log.error(error as Error, 'Error fetching kosts');
-    return reply.status(500).send({ success: false, message: 'Failed to fetch kosts' });
+    throw error;
   }
 };
 
@@ -18,12 +17,17 @@ export const getKost = async (req: FastifyRequest<{ Params: { id: string } }>, r
     const { id } = req.params;
     const kost = await prisma.kost.findUnique({ where: { id } });
     if (!kost) {
-      return reply.status(404).send({ success: false, message: 'Kost not found' });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'KOST_NOT_FOUND',
+          message: 'The requested kost could not be found.'
+        }
+      });
     }
     return reply.send({ success: true, data: kost });
   } catch (error) {
-    req.log.error(error as Error, 'Error fetching kost');
-    return reply.status(500).send({ success: false, message: 'Failed to fetch kost' });
+    throw error;
   }
 };
 
@@ -49,8 +53,7 @@ export const createKost = async (req: FastifyRequest<{ Body: KostBody }>, reply:
     const newKost = await prisma.kost.create({ data });
     return reply.status(201).send({ success: true, data: newKost });
   } catch (error) {
-    req.log.error(error as Error, 'Error creating kost');
-    return reply.status(500).send({ success: false, message: 'Failed to create kost' });
+    throw error;
   }
 };
 
@@ -60,7 +63,13 @@ export const updateKost = async (req: FastifyRequest<{ Params: { id: string }; B
     const data = req.body;
     const existingKost = await prisma.kost.findUnique({ where: { id } });
     if (!existingKost) {
-      return reply.status(404).send({ success: false, message: 'Kost not found' });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'KOST_NOT_FOUND',
+          message: 'The requested kost could not be found.'
+        }
+      });
     }
     const updatedKost = await prisma.kost.update({
       where: { id },
@@ -68,8 +77,7 @@ export const updateKost = async (req: FastifyRequest<{ Params: { id: string }; B
     });
     return reply.send({ success: true, data: updatedKost });
   } catch (error) {
-    req.log.error(error as Error, 'Error updating kost');
-    return reply.status(500).send({ success: false, message: 'Failed to update kost' });
+    throw error;
   }
 };
 
@@ -78,12 +86,22 @@ export const deleteKost = async (req: FastifyRequest<{ Params: { id: string } }>
     const { id } = req.params;
     const existingKost = await prisma.kost.findUnique({ where: { id } });
     if (!existingKost) {
-      return reply.status(404).send({ success: false, message: 'Kost not found' });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'KOST_NOT_FOUND',
+          message: 'The requested kost could not be found.'
+        }
+      });
     }
     await prisma.kost.delete({ where: { id } });
-    return reply.send({ success: true, message: 'Kost deleted successfully' });
+    return reply.send({
+      success: true,
+      data: {
+        message: 'Kost deleted successfully.'
+      }
+    });
   } catch (error) {
-    req.log.error(error as Error, 'Error deleting kost');
-    return reply.status(500).send({ success: false, message: 'Failed to delete kost' });
+    throw error;
   }
 };

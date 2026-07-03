@@ -50,8 +50,7 @@ export const getResidents = async (
       }
     });
   } catch (error) {
-    req.log.error(error as Error, 'Error fetching residents');
-    return reply.status(500).send({ success: false, message: 'Failed to fetch residents' });
+    throw error;
   }
 };
 
@@ -69,13 +68,18 @@ export const getResident = async (
     });
 
     if (!resident) {
-      return reply.status(404).send({ success: false, message: 'Resident not found' });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'RESIDENT_NOT_FOUND',
+          message: 'The requested resident could not be found.'
+        }
+      });
     }
 
     return reply.send({ success: true, data: resident });
   } catch (error) {
-    req.log.error(error as Error, 'Error fetching resident');
-    return reply.status(500).send({ success: false, message: 'Failed to fetch resident' });
+    throw error;
   }
 };
 
@@ -107,17 +111,19 @@ export const createResident = async (
   try {
     const data = req.body;
 
-    if (!data.name || !data.kostId) {
-      return reply.status(400).send({ success: false, message: 'Name and kostId are required' });
-    }
-
     // Check if room exists if roomId is provided
     if (data.roomId) {
       const room = await prisma.room.findUnique({
         where: { id: data.roomId }
       });
       if (!room) {
-        return reply.status(404).send({ success: false, message: 'Assigned room not found' });
+        return reply.status(404).send({
+          success: false,
+          error: {
+            code: 'ROOM_NOT_FOUND',
+            message: 'The assigned room could not be found.'
+          }
+        });
       }
     }
 
@@ -125,11 +131,15 @@ export const createResident = async (
     if (data.email) {
       const existingEmail = await prisma.resident.findUnique({ where: { email: data.email } });
       if (existingEmail) {
-        return reply.status(400).send({ success: false, message: `Resident with email ${data.email} already exists` });
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: 'EMAIL_ALREADY_TAKEN',
+            message: `A resident with the email ${data.email} already exists.`
+          }
+        });
       }
     }
-
-
 
     // Transaction to create resident and set room status to OCCUPIED
     const resident = await prisma.$transaction(async (tx) => {
@@ -152,8 +162,7 @@ export const createResident = async (
 
     return reply.status(201).send({ success: true, data: resident });
   } catch (error) {
-    req.log.error(error as Error, 'Error creating resident');
-    return reply.status(500).send({ success: false, message: 'Failed to create resident' });
+    throw error;
   }
 };
 
@@ -170,7 +179,13 @@ export const updateResident = async (
     });
 
     if (!resident) {
-      return reply.status(404).send({ success: false, message: 'Resident not found' });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'RESIDENT_NOT_FOUND',
+          message: 'The requested resident could not be found.'
+        }
+      });
     }
 
     // Verify email if changing
@@ -179,11 +194,15 @@ export const updateResident = async (
         where: { email: data.email }
       });
       if (emailTaken) {
-        return reply.status(400).send({ success: false, message: `Email ${data.email} is already taken` });
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: 'EMAIL_ALREADY_TAKEN',
+            message: `The email ${data.email} is already taken by another resident.`
+          }
+        });
       }
     }
-
-
 
     // Verify room if changing
     if (data.roomId && data.roomId !== resident.roomId) {
@@ -191,7 +210,13 @@ export const updateResident = async (
         where: { id: data.roomId }
       });
       if (!room) {
-        return reply.status(404).send({ success: false, message: 'New assigned room not found' });
+        return reply.status(404).send({
+          success: false,
+          error: {
+            code: 'ROOM_NOT_FOUND',
+            message: 'The new assigned room could not be found.'
+          }
+        });
       }
     }
 
@@ -246,8 +271,7 @@ export const updateResident = async (
 
     return reply.send({ success: true, data: updatedResident });
   } catch (error) {
-    req.log.error(error as Error, 'Error updating resident');
-    return reply.status(500).send({ success: false, message: 'Failed to update resident' });
+    throw error;
   }
 };
 
@@ -266,13 +290,22 @@ export const deleteResident = async (
     });
 
     if (!resident) {
-      return reply.status(404).send({ success: false, message: 'Resident not found' });
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'RESIDENT_NOT_FOUND',
+          message: 'The requested resident could not be found.'
+        }
+      });
     }
 
     if (resident.payments.length > 0) {
       return reply.status(400).send({
         success: false,
-        message: 'Cannot delete resident with existing payment history records.'
+        error: {
+          code: 'PAYMENT_HISTORY_PRESENT',
+          message: 'Cannot delete resident with existing payment history records.'
+        }
       });
     }
 
@@ -299,9 +332,13 @@ export const deleteResident = async (
       }
     });
 
-    return reply.send({ success: true, message: 'Resident deleted successfully' });
+    return reply.send({
+      success: true,
+      data: {
+        message: 'Resident deleted successfully.'
+      }
+    });
   } catch (error) {
-    req.log.error(error as Error, 'Error deleting resident');
-    return reply.status(500).send({ success: false, message: 'Failed to delete resident' });
+    throw error;
   }
 };
