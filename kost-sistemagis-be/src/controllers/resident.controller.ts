@@ -12,6 +12,7 @@ export const getResidents = async (
     const limitNum = parseInt(limit, 10) > 0 ? parseInt(limit, 10) : 10;
     const skip = (pageNum - 1) * limitNum;
 
+    const user = req.session?.user;
     const whereClause: any = {};
     if (search) {
       whereClause.OR = [
@@ -24,6 +25,17 @@ export const getResidents = async (
     }
     if (kostId) {
       whereClause.kostId = kostId;
+    }
+
+    // Filter by ownership if the user is not an admin/SuperAdmin
+    if (user && (user as any).role !== 'admin' && (user as any).role !== 'SuperAdmin') {
+      whereClause.kost = {
+        managers: {
+          some: {
+            userId: user.id
+          }
+        }
+      };
     }
 
     const [residents, total] = await Promise.all([
