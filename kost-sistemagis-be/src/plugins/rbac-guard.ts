@@ -7,7 +7,13 @@ export const requirePermission = (action: string, resource: string) => {
     const sessionData = req.session;
     
     if (!sessionData?.user) {
-      return reply.status(401).send({ error: 'Unauthorized', message: 'Not authenticated' });
+      return reply.status(401).send({ 
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED', 
+          message: 'Not authenticated.' 
+        }
+      });
     }
     
     const user = sessionData.user;
@@ -32,7 +38,13 @@ export const requirePermission = (action: string, resource: string) => {
     });
 
     if (!userWithRoles?.roleRelation) {
-      return reply.status(403).send({ error: 'Forbidden', message: 'User has no assigned role' });
+      return reply.status(403).send({ 
+        success: false,
+        error: {
+          code: 'FORBIDDEN', 
+          message: 'User has no assigned role.' 
+        }
+      });
     }
 
     const hasPermission = userWithRoles.roleRelation.permissions.some(
@@ -41,8 +53,11 @@ export const requirePermission = (action: string, resource: string) => {
 
     if (!hasPermission) {
       return reply.status(403).send({ 
-        error: 'Forbidden', 
-        message: `Missing required permission: ${action} on ${resource}` 
+        success: false,
+        error: {
+          code: 'FORBIDDEN', 
+          message: `Missing required permission: ${action} on ${resource}.` 
+        }
       });
     }
   };

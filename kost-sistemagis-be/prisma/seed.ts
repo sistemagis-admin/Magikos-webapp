@@ -1,9 +1,5 @@
 import "dotenv/config";
-import { PrismaClient } from '../src/generated/prisma';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
-
-const adapter = new PrismaBetterSqlite3({ url: 'dev.db' });
-const prisma = new PrismaClient({ adapter });
+import { prisma } from '../src/plugins/database';
 
 async function main() {
   console.log("Starting database seeding...");

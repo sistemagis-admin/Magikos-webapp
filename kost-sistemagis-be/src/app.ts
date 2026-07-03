@@ -18,6 +18,7 @@ import { env } from './config/env';
 import fastifyCors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
 import fastifyRateLimit from '@fastify/rate-limit';
+import { handlePrismaError } from './utils/error-handler';
 
 export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   const app = fastify(opts);
@@ -30,8 +31,21 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
         success: false,
         error: {
           code: 'VALIDATION_FAILED',
-          message: 'Invalid request payload',
+          message: 'Invalid request payload format.',
           details: error.validation
+        }
+      });
+    }
+
+    // Tangani error terkait database (Prisma)
+    const dbError = handlePrismaError(error);
+    if (dbError) {
+      return reply.status(dbError.statusCode).send({
+        success: false,
+        error: {
+          code: dbError.code,
+          message: dbError.message,
+          details: error.message
         }
       });
     }
@@ -42,7 +56,7 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
     // Jangan terekspos error internal di production
     const isInternalError = statusCode === 500;
     const message = isInternalError && env.NODE_ENV === 'production' 
-      ? 'Internal Server Error' 
+      ? 'An internal server error occurred.' 
       : error.message;
 
     if (isInternalError) {

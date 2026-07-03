@@ -20,8 +20,11 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply) {
 
     if (!session) {
       return reply.status(401).send({ 
-        error: 'Unauthorized', 
-        message: 'You must be logged in to access this resource.' 
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED', 
+          message: 'You must be logged in to access this resource.' 
+        }
       });
     }
 
@@ -29,13 +32,16 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply) {
     const user = session.user as any;
     if (user.banned === true) {
       const banExpires = user.banExpires ? new Date(user.banExpires) : null;
-      // Jika masa ban sudah habis, izinkan masuk (ban expired)
+      // Jika masa ban belum habis, izinkan masuk (ban expired)
       if (!banExpires || banExpires > new Date()) {
         return reply.status(403).send({
-          error: 'Forbidden',
-          message: user.banReason
-            ? `Akun Anda dinonaktifkan. Alasan: ${user.banReason}`
-            : 'Akun Anda telah dinonaktifkan oleh administrator.'
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: user.banReason
+              ? `Your account has been deactivated. Reason: ${user.banReason}`
+              : 'Your account has been deactivated by the administrator.'
+          }
         });
       }
     }
@@ -44,8 +50,11 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply) {
   } catch (error) {
     req.log.error(error as Error, 'Auth Guard Error');
     return reply.status(500).send({ 
-      error: 'Internal Server Error', 
-      message: 'Failed to verify session' 
+      success: false,
+      error: {
+        code: 'INTERNAL_SERVER_ERROR', 
+        message: 'Failed to verify session.' 
+      }
     });
   }
 }
