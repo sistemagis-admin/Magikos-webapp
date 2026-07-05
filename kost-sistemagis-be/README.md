@@ -141,17 +141,25 @@ Aplikasi membaca variabel-variabel berikut dari file `.env`:
 
 ---
 
-## 📖 Dokumentasi API (Swagger UI)
+## 📖 Dokumentasi API & Pengujian
 
-Untuk memudahkan Frontend Developer (FE) dan QA Engineer dalam memahami, mencoba, dan menguji API, kami telah menyediakan **Swagger UI** otomatis.
+Untuk memudahkan Frontend Developer (FE) dan QA Engineer dalam memahami, mencoba, dan menguji API, kami telah menyediakan dua cara utama:
 
+### 1. Swagger UI (Dokumentasi Otomatis)
 Ketika server berjalan, Anda dapat mengakses dokumentasi API lengkap beserta skema request-response pada URL:
 👉 **[http://localhost:3000/documentation](http://localhost:3000/documentation)**
 
+### 2. Perintah cURL Mentah (Hoppscotch/Postman)
+Untuk pengujian cepat menggunakan command line atau diimpor langsung ke alat API Client seperti Hoppscotch dan Postman, silakan lihat daftar cURL lengkap pada file berikut:
+👉 **[Dokumentasi cURL API](file:///d:/Work/Sistemagis/Management%20Kost/kost-sistemagis-be/docs/api-curl.md)**
+
+---
+
 ### Beberapa API Utama:
 1. **Autentikasi (Better Auth)**: `/api/auth/*` (Login, Register, Session check)
-2. **Kamar (Rooms)**: `/api/v1/rooms` (Manajemen kamar kos)
-3. **Penghuni (Residents)**: `/api/v1/residents` (Manajemen data penghuni kos)
-4. **Dashboard**: `/api/v1/dashboard` (Statistik hunian, dsb)
-5. **IoT Gateway (MQTT)**: `/api/v1/iot/door/open` (Trigger simulasi buka pintu)
-6. **Payment Webhook**: `/api/v1/payment/webhook` (Callback status pembayaran)
+2. **Gedung Kos (Kosts)**: `/api/v1/kosts` (Manajemen gedung kost)
+3. **Kamar (Rooms)**: `/api/v1/rooms` (Manajemen kamar kos)
+4. **Penghuni (Residents)**: `/api/v1/residents` (Manajemen data penghuni kos)
+5. **Dashboard**: `/api/v1/dashboard` (Statistik hunian, dsb)
+6. **IoT Gateway (MQTT)**: `/api/v1/iot/door/open` (Trigger simulasi buka pintu)
+7. **Payment Webhook**: `/api/v1/payment/webhook` (Callback status pembayaran)
