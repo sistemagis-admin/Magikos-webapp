@@ -1,3 +1,65 @@
+import { standardErrorResponses } from './common.schema';
+
+const kostProperties = {
+  id: { type: 'string' },
+  name: { type: 'string' },
+  type: { type: 'string' },
+  description: { type: 'string', nullable: true },
+  address: { type: 'string' },
+  city: { type: 'string', nullable: true },
+  province: { type: 'string', nullable: true },
+  postalCode: { type: 'string', nullable: true },
+  contactName: { type: 'string', nullable: true },
+  contactPhone: { type: 'string', nullable: true },
+  bankName: { type: 'string', nullable: true },
+  bankAccount: { type: 'string', nullable: true },
+  bankAccountName: { type: 'string', nullable: true },
+  imageUrl: { type: 'string', nullable: true },
+  createdAt: { type: 'string' },
+  updatedAt: { type: 'string' }
+};
+
+export const getKostsSchema = {
+  tags: ['Kost'],
+  summary: 'List all kost buildings',
+  description: 'Retrieves all kost buildings. For KostManagers, results are filtered to their managed buildings.',
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: kostProperties
+          }
+        }
+      }
+    },
+    ...standardErrorResponses
+  }
+};
+
+export const getKostSchema = {
+  tags: ['Kost'],
+  summary: 'Get kost building details',
+  description: 'Retrieves details of a specific kost building by ID.',
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: kostProperties
+        }
+      }
+    },
+    ...standardErrorResponses
+  }
+};
+
 export const createKostSchema = {
   tags: ['Kost'],
   summary: 'Create a new kost building',
@@ -20,6 +82,19 @@ export const createKostSchema = {
       bankAccountName: { type: 'string', nullable: true, description: 'Bank account owner name' },
       imageUrl: { type: 'string', nullable: true, description: 'Kost main building image URL' }
     }
+  },
+  response: {
+    201: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: kostProperties
+        }
+      }
+    },
+    ...standardErrorResponses
   }
 };
 
@@ -44,5 +119,39 @@ export const updateKostSchema = {
       bankAccountName: { type: 'string', nullable: true, description: 'Bank account owner name' },
       imageUrl: { type: 'string', nullable: true, description: 'Kost main building image URL' }
     }
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: kostProperties
+        }
+      }
+    },
+    ...standardErrorResponses
+  }
+};
+
+export const deleteKostSchema = {
+  tags: ['Kost'],
+  summary: 'Delete a kost building',
+  description: 'Deletes a specific kost building by ID.',
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            message: { type: 'string', example: 'Kost deleted successfully.' }
+          }
+        }
+      }
+    },
+    ...standardErrorResponses
   }
 };

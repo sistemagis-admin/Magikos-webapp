@@ -1,3 +1,103 @@
+import { standardErrorResponses } from './common.schema';
+
+const residentProperties = {
+  id: { type: 'string' },
+  name: { type: 'string' },
+  email: { type: 'string', nullable: true },
+  phone: { type: 'string', nullable: true },
+  nik: { type: 'string', nullable: true },
+  gender: { type: 'string', enum: ['MALE', 'FEMALE'], nullable: true },
+  placeOfBirth: { type: 'string', nullable: true },
+  dateOfBirth: { type: 'string', nullable: true },
+  identityAddress: { type: 'string', nullable: true },
+  occupation: { type: 'string', nullable: true },
+  institution: { type: 'string', nullable: true },
+  emergencyContactName: { type: 'string', nullable: true },
+  emergencyContactRelation: { type: 'string', nullable: true },
+  emergencyContactPhone: { type: 'string', nullable: true },
+  ktpUrl: { type: 'string', nullable: true },
+  avatarUrl: { type: 'string', nullable: true },
+  roomId: { type: 'string', nullable: true },
+  userId: { type: 'string', nullable: true },
+  kostId: { type: 'string' },
+  createdAt: { type: 'string' },
+  updatedAt: { type: 'string' }
+};
+
+const residentWithRoomProperties = {
+  ...residentProperties,
+  room: {
+    type: 'object',
+    nullable: true,
+    properties: {
+      id: { type: 'string' },
+      number: { type: 'string' },
+      status: { type: 'string' },
+      monthlyPrice: { type: 'number' }
+    }
+  }
+};
+
+export const getResidentsSchema = {
+  tags: ['Resident'],
+  summary: 'List all residents',
+  description: 'Retrieves a paginated list of residents with optional filters.',
+  querystring: {
+    type: 'object',
+    properties: {
+      page: { type: 'string', pattern: '^[0-9]+$', default: '1', description: 'Page number for pagination' },
+      limit: { type: 'string', pattern: '^[0-9]+$', default: '10', description: 'Limit number of items per page' },
+      search: { type: 'string', description: 'Search term by name or email' },
+      roomId: { type: 'string', description: 'Filter by room ID' },
+      kostId: { type: 'string', description: 'Filter by kost building ID' }
+    }
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: residentWithRoomProperties
+          }
+        },
+        meta: {
+          type: 'object',
+          properties: {
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            limit: { type: 'integer' },
+            totalPages: { type: 'integer' }
+          }
+        }
+      }
+    },
+    ...standardErrorResponses
+  }
+};
+
+export const getResidentSchema = {
+  tags: ['Resident'],
+  summary: 'Get resident details',
+  description: 'Retrieves profile and room details for a specific resident.',
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: residentWithRoomProperties
+        }
+      }
+    },
+    ...standardErrorResponses
+  }
+};
+
 export const createResidentSchema = {
   tags: ['Resident'],
   summary: 'Register a new resident',
@@ -25,6 +125,19 @@ export const createResidentSchema = {
       userId: { type: 'string', nullable: true, description: 'User account ID mapped to this resident' },
       kostId: { type: 'string', description: 'Kost building ID' }
     }
+  },
+  response: {
+    201: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: residentWithRoomProperties
+        }
+      }
+    },
+    ...standardErrorResponses
   }
 };
 
@@ -54,21 +167,39 @@ export const updateResidentSchema = {
       userId: { type: 'string', nullable: true, description: 'User account ID' },
       kostId: { type: 'string', nullable: true, description: 'Kost building ID' }
     }
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: residentWithRoomProperties
+        }
+      }
+    },
+    ...standardErrorResponses
   }
 };
 
-export const getResidentsSchema = {
+export const deleteResidentSchema = {
   tags: ['Resident'],
-  summary: 'List all residents',
-  description: 'Retrieves a paginated list of residents with optional filters.',
-  querystring: {
-    type: 'object',
-    properties: {
-      page: { type: 'string', pattern: '^[0-9]+$', default: '1', description: 'Page number for pagination' },
-      limit: { type: 'string', pattern: '^[0-9]+$', default: '10', description: 'Limit number of items per page' },
-      search: { type: 'string', description: 'Search term by name or email' },
-      roomId: { type: 'string', description: 'Filter by room ID' },
-      kostId: { type: 'string', description: 'Filter by kost building ID' }
-    }
+  summary: 'Delete a resident',
+  description: 'Deletes a specific resident by ID. Fails if they have payment history.',
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            message: { type: 'string', example: 'Resident deleted successfully.' }
+          }
+        }
+      }
+    },
+    ...standardErrorResponses
   }
 };
