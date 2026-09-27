@@ -1,5 +1,3 @@
-import { errorResponseSchema, unauthorizedResponseSchema, internalServerErrorSchema } from './common.schema';
-
 export const signUpSchema = {
   tags: ['Auth'],
   summary: 'Register a new user',
@@ -37,9 +35,7 @@ export const signUpSchema = {
           }
         }
       }
-    },
-    400: errorResponseSchema,
-    500: internalServerErrorSchema
+    }
   }
 };
 
@@ -80,10 +76,7 @@ export const signInSchema = {
           }
         }
       }
-    },
-    400: errorResponseSchema,
-    401: unauthorizedResponseSchema,
-    500: internalServerErrorSchema
+    }
   }
 };
 
@@ -100,13 +93,12 @@ export const signOutSchema = {
           type: 'object',
           nullable: true,
           properties: {
+            message: { type: 'string' },
             success: { type: 'boolean' }
           }
         }
       }
-    },
-    401: unauthorizedResponseSchema,
-    500: internalServerErrorSchema
+    }
   }
 };
 
@@ -144,8 +136,6 @@ export const getSessionSchema = {
           }
         }
       }
-    },
-    401: unauthorizedResponseSchema,
-    500: internalServerErrorSchema
+    }
   }
 };
