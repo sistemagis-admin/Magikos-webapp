@@ -2,7 +2,7 @@
   "name": "kost-sistemagis-be",
   "version": "1.0.0",
   "description": "Backend Manajemen Kos dengan Fastify dan TypeScript",
-  "main": "server.ts",
+  "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch server.ts",
     "build": "prisma generate && tsc",

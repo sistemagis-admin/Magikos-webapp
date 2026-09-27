@@ -37,7 +37,16 @@ if (!process.env.VERCEL) {
   start();
 }
 
-export default async function handler(req: any, res: any) {
+async function handler(req: any, res: any) {
   await app.ready();
   app.server.emit('request', req, res);
+}
+
+export default handler;
+
+// CommonJS compatibility for Vercel
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = handler;
+  module.exports.default = handler;
+  module.exports.app = app;
 }
