@@ -1,14 +1,17 @@
 import { prisma } from "../plugins/database";
 import { env } from "./env";
 
+// Helper to perform true native ESM dynamic import in TypeScript CommonJS runtime
+const dynamicImport = new Function('specifier', 'return import(specifier)') as <T = any>(specifier: string) => Promise<T>;
+
 let authInstance: any = null;
 
 export async function getAuth() {
   if (!authInstance) {
     const [{ betterAuth }, { prismaAdapter }, { admin, bearer }] = await Promise.all([
-      import("better-auth"),
-      import("better-auth/adapters/prisma"),
-      import("better-auth/plugins")
+      dynamicImport("better-auth"),
+      dynamicImport("better-auth/adapters/prisma"),
+      dynamicImport("better-auth/plugins")
     ]);
 
     authInstance = betterAuth({
