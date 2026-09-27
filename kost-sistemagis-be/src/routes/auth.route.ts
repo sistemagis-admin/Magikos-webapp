@@ -2,11 +2,47 @@ import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { toWebHeaders } from '../utils/headers';
 import { getAuth } from '../config/auth';
 import { signUpSchema, signInSchema, signOutSchema, getSessionSchema } from './schemas/auth.schema';
-
 import { handlePrismaError } from '../utils/error-handler';
 
-// Helper untuk memproses request menggunakan handler Better Auth
-async function handleBetterAuth(request: FastifyRequest, reply: FastifyReply) {
+// Helper untuk format error auth yang informatif
+function formatAuthError(error: any, reply: FastifyReply) {
+  const dbError = handlePrismaError(error);
+  if (dbError) {
+    return reply.status(dbError.statusCode).send({
+      success: false,
+      error: {
+        code: dbError.code,
+        message: dbError.message,
+        details: error.message
+      }
+    });
+  }
+
+  const rawStatus = error.status || error.statusCode;
+  let statusCode = 400;
+  if (typeof rawStatus === 'number') {
+    statusCode = rawStatus;
+  } else if (rawStatus === 'UNPROCESSABLE_ENTITY') {
+    statusCode = 422;
+  } else if (rawStatus === 'UNAUTHORIZED') {
+    statusCode = 401;
+  }
+
+  const message = error.body?.message || error.message || 'Authentication error';
+  const code = error.body?.code || error.code || 'AUTH_ERROR';
+
+  return reply.status(statusCode).send({
+    success: false,
+    error: {
+      code,
+      message,
+      details: error.body || error.message
+    }
+  });
+}
+
+// Fallback helper untuk memproses request wildcard Better Auth (seperti OAuth, reset password, dll)
+async function handleBetterAuthFallback(request: FastifyRequest, reply: FastifyReply) {
   try {
     const auth = await getAuth();
     const host = (request.headers['x-forwarded-host'] as string) || request.headers.host || 'localhost:3000';
@@ -25,7 +61,6 @@ async function handleBetterAuth(request: FastifyRequest, reply: FastifyReply) {
     // Forward headers
     response.headers.forEach((value: string, key: string) => reply.header(key, value));
 
-    // Jika ini adalah redirect (3xx), teruskan secara langsung tanpa diubah
     if (response.status >= 300 && response.status < 400) {
       reply.status(response.status);
       return reply.send(response.body ? await response.text() : null);
@@ -41,7 +76,6 @@ async function handleBetterAuth(request: FastifyRequest, reply: FastifyReply) {
       }
     }
 
-    // Penanganan respon sukses (2xx)
     if (response.status >= 200 && response.status < 300) {
       return reply.status(response.status).send({
         success: true,
@@ -49,75 +83,17 @@ async function handleBetterAuth(request: FastifyRequest, reply: FastifyReply) {
       });
     }
 
-    // Penanganan error response (4xx / 5xx)
     reply.status(response.status);
-    if (bodyJSON) {
-      let errorCode = 'AUTH_ERROR';
-      let errorMessage = bodyJSON.message || bodyJSON.error || 'Authentication failed.';
-      
-      const rawError = (bodyJSON.error || bodyJSON.message || '').toLowerCase();
-      
-      if (rawError.includes('already in use') || rawError.includes('already_in_use') || rawError.includes('email already exists')) {
-        errorCode = 'EMAIL_ALREADY_IN_USE';
-        errorMessage = 'Email address is already registered. Please use another email or log in directly.';
-      } else if (rawError.includes('invalid email or password') || rawError.includes('invalid_email_or_password') || rawError.includes('invalid password') || rawError.includes('credentials_missing') || rawError.includes('invalid credentials')) {
-        errorCode = 'INVALID_CREDENTIALS';
-        errorMessage = 'Incorrect email or password.';
-      } else if (rawError.includes('user not found') || rawError.includes('user_not_found')) {
-        errorCode = 'USER_NOT_FOUND';
-        errorMessage = 'User account not found.';
-      } else if (rawError.includes('session expired') || rawError.includes('session_expired')) {
-        errorCode = 'SESSION_EXPIRED';
-        errorMessage = 'Your session has expired. Please log in again.';
-      } else if (rawError.includes('too short') || rawError.includes('too_short') || rawError.includes('password length')) {
-        errorCode = 'PASSWORD_TOO_SHORT';
-        errorMessage = 'Password is too short. Minimum length is 8 characters.';
-      } else if (rawError.includes('invalid email') || rawError.includes('invalid_email') || rawError.includes('email format')) {
-        errorCode = 'INVALID_EMAIL';
-        errorMessage = 'Invalid email address format.';
-      }
-
-      return reply.send({
-        success: false,
-        error: {
-          code: errorCode,
-          message: errorMessage,
-          details: bodyJSON
-        }
-      });
-    }
-
     return reply.send({
       success: false,
       error: {
         code: 'AUTH_ERROR',
-        message: bodyText || 'Authentication failed.'
+        message: bodyJSON?.message || bodyText || 'Authentication failed.',
+        details: bodyJSON
       }
     });
   } catch (error: any) {
-    request.log.error(error as Error, 'Authentication Error');
-    
-    // Cek jika error terjadi karena masalah database Prisma
-    const dbError = handlePrismaError(error);
-    if (dbError) {
-      return reply.status(dbError.statusCode).send({
-        success: false,
-        error: {
-          code: dbError.code,
-          message: dbError.message,
-          details: error.message
-        }
-      });
-    }
-
-    return reply.status(500).send({
-      success: false,
-      error: {
-        code: 'INTERNAL_AUTH_ERROR',
-        message: 'An internal error occurred during the authentication process.',
-        details: error.message
-      }
-    });
+    return formatAuthError(error, reply);
   }
 }
 
@@ -126,39 +102,93 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/sign-up/email', {
     config: {
       rateLimit: {
-        max: 5,
+        max: 10,
         timeWindow: '1 minute'
       }
     },
     schema: signUpSchema
-  }, handleBetterAuth);
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const auth = await getAuth();
+      const res = await auth.api.signUpEmail({
+        body: request.body as any,
+        headers: toWebHeaders(request.headers)
+      });
+      return reply.status(200).send({
+        success: true,
+        data: res
+      });
+    } catch (error: any) {
+      return formatAuthError(error, reply);
+    }
+  });
 
   // 2. Endpoint Login (Sign In)
   fastify.post('/sign-in/email', {
     config: {
       rateLimit: {
-        max: 10,
+        max: 15,
         timeWindow: '1 minute'
       }
     },
     schema: signInSchema
-  }, handleBetterAuth);
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const auth = await getAuth();
+      const res = await auth.api.signInEmail({
+        body: request.body as any,
+        headers: toWebHeaders(request.headers)
+      });
+      return reply.status(200).send({
+        success: true,
+        data: res
+      });
+    } catch (error: any) {
+      return formatAuthError(error, reply);
+    }
+  });
 
   // 3. Endpoint Logout (Sign Out)
   fastify.post('/sign-out', {
     schema: signOutSchema
-  }, handleBetterAuth);
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const auth = await getAuth();
+      await auth.api.signOut({
+        headers: toWebHeaders(request.headers)
+      });
+      return reply.status(200).send({
+        success: true,
+        data: { message: 'Successfully signed out' }
+      });
+    } catch (error: any) {
+      return formatAuthError(error, reply);
+    }
+  });
 
   // 4. Endpoint Get Session
   fastify.get('/get-session', {
     schema: getSessionSchema
-  }, handleBetterAuth);
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const auth = await getAuth();
+      const session = await auth.api.getSession({
+        headers: toWebHeaders(request.headers)
+      });
+      return reply.status(200).send({
+        success: true,
+        data: session
+      });
+    } catch (error: any) {
+      return formatAuthError(error, reply);
+    }
+  });
 
   // Fallback wildcard rute untuk menangkap sisa API internal Better Auth (seperti OAuth, reset password, dll.)
   fastify.route({
     method: ['GET', 'POST'],
     url: '/*',
-    handler: handleBetterAuth,
+    handler: handleBetterAuthFallback,
   });
 };
 

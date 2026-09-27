@@ -83,7 +83,8 @@ export const internalServerErrorSchema = {
       type: 'object',
       properties: {
         code: { type: 'string', example: 'INTERNAL_SERVER_ERROR' },
-        message: { type: 'string', example: 'An internal server error occurred.' }
+        message: { type: 'string', example: 'An internal server error occurred.' },
+        details: { type: 'string', nullable: true }
       }
     }
   }
