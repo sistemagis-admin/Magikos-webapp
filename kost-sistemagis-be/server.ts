@@ -2,7 +2,7 @@
 import { buildApp } from './src/app';
 import { env } from './src/config/env';
 
-const app = buildApp({
+export const app = buildApp({
   logger: {
     level: 'info',
     redact: ['req.headers.authorization', 'req.headers.cookie', 'body.password', 'body.token']
@@ -32,4 +32,9 @@ const start = async () => {
   }
 };
 
-start();
+// Start server on standard node environment; Vercel handles invocation serverlessly
+if (!process.env.VERCEL) {
+  start();
+}
+
+export default app;
