@@ -93,14 +93,29 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
     openapi: {
       info: {
         title: 'KosMonitor API Documentation',
-        description: 'Dokumentasi API Otomatis untuk Dashboard Manajemen Kos Sistemagis',
+        description: 'Dokumentasi API Otomatis untuk Dashboard Manajemen Kos Sistemagis (IoT & Cloud)',
         version: '1.0.0'
       },
       servers: [
         {
-          url: `http://${env.HOST === '0.0.0.0' ? 'localhost' : env.HOST}:${env.PORT}`
+          url: 'https://magikos-webapp.vercel.app',
+          description: 'Production Server (Vercel Cloud)'
+        },
+        {
+          url: `http://localhost:${env.PORT}`,
+          description: 'Local Development Server'
         }
-      ]
+      ],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+            description: 'Masukkan Session Token / Bearer Token dari login'
+          }
+        }
+      }
     }
   });
 

@@ -9,7 +9,9 @@ import { handlePrismaError } from '../utils/error-handler';
 async function handleBetterAuth(request: FastifyRequest, reply: FastifyReply) {
   try {
     const auth = await getAuth();
-    const url = new URL(request.url, `${request.protocol}://${request.headers.host}`);
+    const host = (request.headers['x-forwarded-host'] as string) || request.headers.host || 'localhost:3000';
+    const proto = (request.headers['x-forwarded-proto'] as string) || request.protocol || 'https';
+    const url = new URL(request.url, `${proto}://${host}`);
     const headers = toWebHeaders(request.headers);
     
     const req = new Request(url.toString(), {

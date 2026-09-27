@@ -35,8 +35,15 @@ export async function getAuth() {
         enabled: true,
       },
       advanced: {
-        disableCSRFCheck: env.NODE_ENV !== "production",
+        disableCSRFCheck: true,
       },
+      trustedOrigins: [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'https://magikos-webapp.vercel.app',
+        ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+        ...(Array.isArray(env.CORS_ORIGIN) ? env.CORS_ORIGIN : [env.CORS_ORIGIN])
+      ],
     });
   }
   return authInstance;
