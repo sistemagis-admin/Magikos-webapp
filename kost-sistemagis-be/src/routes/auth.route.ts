@@ -121,11 +121,23 @@ async function handleBetterAuth(request: FastifyRequest, reply: FastifyReply) {
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   // 1. Endpoint Registrasi (Sign Up)
   fastify.post('/sign-up/email', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute'
+      }
+    },
     schema: signUpSchema
   }, handleBetterAuth);
 
   // 2. Endpoint Login (Sign In)
   fastify.post('/sign-in/email', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute'
+      }
+    },
     schema: signInSchema
   }, handleBetterAuth);
 

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { prisma } from '../src/plugins/database';
+import { auth } from '../src/config/auth';
 
 async function main() {
   console.log("Starting database seeding...");
@@ -15,6 +16,8 @@ async function main() {
   await prisma.rolePermission.deleteMany({});
   await prisma.permission.deleteMany({});
   await prisma.role.deleteMany({});
+  await prisma.session.deleteMany({});
+  await prisma.account.deleteMany({});
   await prisma.user.deleteMany({});
 
   console.log("Cleaned existing data.");
@@ -66,16 +69,39 @@ async function main() {
     });
   }
 
-  const admin = await prisma.user.create({
+  // Create Admin User using Better Auth so password account is created
+  let admin = await prisma.user.findUnique({ where: { email: "admin@sistemagis.com" } });
+  if (!admin) {
+    try {
+      const authRes = await auth.api.signUpEmail({
+        body: {
+          email: "admin@sistemagis.com",
+          password: "AdminPassword123!",
+          name: "Admin Sistemagis",
+        }
+      });
+      admin = authRes.user as any;
+    } catch (e) {
+      console.warn("Could not signUp via auth.api, creating user directly:", e);
+      admin = await prisma.user.create({
+        data: {
+          email: "admin@sistemagis.com",
+          name: "Admin Sistemagis",
+        }
+      });
+    }
+  }
+
+  // Assign SuperAdmin role to admin
+  admin = await prisma.user.update({
+    where: { id: admin!.id },
     data: {
-      email: "admin@sistemagis.com",
-      name: "Admin Sistemagis",
-      role: "admin", 
+      role: "admin",
       roleId: superAdminRole.id,
     }
   });
 
-  console.log("Created Roles, Permissions, and Admin User.");
+  console.log("Created Roles, Permissions, and Admin User (email: admin@sistemagis.com, pass: AdminPassword123!).");
 
   // Create Kosts
   const kost1 = await prisma.kost.create({

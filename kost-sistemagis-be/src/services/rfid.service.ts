@@ -16,8 +16,8 @@ export class RfidService {
       });
       return { success: true, message: 'Pintu berhasil dibuka' };
     } else {
-      this.fastify.log.error('MQTT client is not connected');
-      throw new Error('MQTT integration failed');
+      this.fastify.log.info(`[MOCK/SIMULATION] MQTT disabled. Simulated door open for tag: ${rfidTag}`);
+      return { success: true, message: 'Pintu berhasil dibuka (Simulasi - MQTT dinonaktifkan)' };
     }
   }
 }

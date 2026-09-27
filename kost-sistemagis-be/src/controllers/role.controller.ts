@@ -8,12 +8,13 @@ export const getRoles = async (req: FastifyRequest, reply: FastifyReply) => {
         permissions: {
           include: { permission: true }
         }
-      }
+      },
+      orderBy: { name: 'asc' }
     });
     return reply.send({ success: true, data: roles });
   } catch (error) {
     req.log.error(error as Error, 'Error fetching roles');
-    return reply.status(500).send({ success: false, message: 'Failed to fetch roles' });
+    throw error;
   }
 };
 
@@ -22,27 +23,39 @@ export const createRole = async (
   reply: FastifyReply
 ) => {
   try {
-    const { name, description, permissionIds } = req.body;
+    const { name, description, permissionIds } = req.body || {};
+
+    if (!name) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'VALIDATION_FAILED',
+          message: 'Role name is required.'
+        }
+      });
+    }
     
     const role = await prisma.role.create({
       data: {
         name,
         description,
-        permissions: permissionIds ? {
+        permissions: permissionIds && permissionIds.length > 0 ? {
           create: permissionIds.map(id => ({
             permission: { connect: { id } }
           }))
         } : undefined
       },
       include: {
-        permissions: true
+        permissions: {
+          include: { permission: true }
+        }
       }
     });
     
-    return reply.send({ success: true, data: role });
+    return reply.status(201).send({ success: true, data: role });
   } catch (error) {
     req.log.error(error as Error, 'Error creating role');
-    return reply.status(500).send({ success: false, message: 'Failed to create role' });
+    throw error;
   }
 };
 
@@ -52,17 +65,43 @@ export const updateRole = async (
 ) => {
   try {
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, description } = req.body || {};
+
+    const existing = await prisma.role.findUnique({ where: { id } });
+    if (!existing) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'ROLE_NOT_FOUND',
+          message: 'The requested role could not be found.'
+        }
+      });
+    }
+
+    if (existing.name === 'SuperAdmin' && name && name !== 'SuperAdmin') {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'SYSTEM_ROLE_PROTECTED',
+          message: 'The built-in SuperAdmin role name cannot be modified.'
+        }
+      });
+    }
     
     const role = await prisma.role.update({
       where: { id },
-      data: { name, description }
+      data: { name, description },
+      include: {
+        permissions: {
+          include: { permission: true }
+        }
+      }
     });
     
     return reply.send({ success: true, data: role });
   } catch (error) {
     req.log.error(error as Error, 'Error updating role');
-    return reply.status(500).send({ success: false, message: 'Failed to update role' });
+    throw error;
   }
 };
 
@@ -72,13 +111,39 @@ export const deleteRole = async (
 ) => {
   try {
     const { id } = req.params;
+
+    const existing = await prisma.role.findUnique({ where: { id } });
+    if (!existing) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'ROLE_NOT_FOUND',
+          message: 'The requested role could not be found.'
+        }
+      });
+    }
+
+    if (existing.name === 'SuperAdmin') {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'SYSTEM_ROLE_PROTECTED',
+          message: 'The built-in SuperAdmin role cannot be deleted.'
+        }
+      });
+    }
     
     await prisma.role.delete({ where: { id } });
     
-    return reply.send({ success: true, message: 'Role deleted successfully' });
+    return reply.send({
+      success: true,
+      data: {
+        message: 'Role deleted successfully.'
+      }
+    });
   } catch (error) {
     req.log.error(error as Error, 'Error deleting role');
-    return reply.status(500).send({ success: false, message: 'Failed to delete role' });
+    throw error;
   }
 };
 
@@ -88,20 +153,43 @@ export const updateRolePermissions = async (
 ) => {
   try {
     const { id } = req.params;
-    const { permissionIds } = req.body;
-    
-    await prisma.rolePermission.deleteMany({
-      where: { roleId: id }
-    });
-    
-    if (permissionIds && permissionIds.length > 0) {
-      await prisma.rolePermission.createMany({
-        data: permissionIds.map(permId => ({
-          roleId: id,
-          permissionId: permId
-        }))
+    const { permissionIds } = req.body || {};
+
+    const existing = await prisma.role.findUnique({ where: { id } });
+    if (!existing) {
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: 'ROLE_NOT_FOUND',
+          message: 'The requested role could not be found.'
+        }
       });
     }
+
+    if (existing.name === 'SuperAdmin') {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'SYSTEM_ROLE_PROTECTED',
+          message: 'Permissions for the built-in SuperAdmin role cannot be revoked.'
+        }
+      });
+    }
+    
+    await prisma.$transaction(async (tx) => {
+      await tx.rolePermission.deleteMany({
+        where: { roleId: id }
+      });
+      
+      if (permissionIds && permissionIds.length > 0) {
+        await tx.rolePermission.createMany({
+          data: permissionIds.map(permId => ({
+            roleId: id,
+            permissionId: permId
+          }))
+        });
+      }
+    });
     
     const updatedRole = await prisma.role.findUnique({
       where: { id },
@@ -111,6 +199,7 @@ export const updateRolePermissions = async (
     return reply.send({ success: true, data: updatedRole });
   } catch (error) {
     req.log.error(error as Error, 'Error updating role permissions');
-    return reply.status(500).send({ success: false, message: 'Failed to update role permissions' });
+    throw error;
   }
 };
+

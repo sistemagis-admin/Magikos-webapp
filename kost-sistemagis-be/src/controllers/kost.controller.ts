@@ -120,6 +120,32 @@ export const deleteKost = async (req: FastifyRequest<{ Params: { id: string } }>
         }
       });
     }
+
+    const [activeResidents, payments] = await Promise.all([
+      prisma.resident.count({ where: { kostId: id } }),
+      prisma.payment.count({ where: { kostId: id } })
+    ]);
+
+    if (activeResidents > 0) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'ACTIVE_RESIDENTS_PRESENT',
+          message: 'Cannot delete kost building because it still has active residents.'
+        }
+      });
+    }
+
+    if (payments > 0) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'PAYMENT_HISTORY_PRESENT',
+          message: 'Cannot delete kost building because it has payment transaction history.'
+        }
+      });
+    }
+
     await prisma.kost.delete({ where: { id } });
     return reply.send({
       success: true,

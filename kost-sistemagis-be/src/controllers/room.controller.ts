@@ -9,7 +9,8 @@ export const getRooms = async (
     const { page = '1', limit = '10', search, status, kostId } = req.query;
 
     const pageNum = parseInt(page, 10) > 0 ? parseInt(page, 10) : 1;
-    const limitNum = parseInt(limit, 10) > 0 ? parseInt(limit, 10) : 10;
+    const parsedLimit = parseInt(limit, 10) > 0 ? parseInt(limit, 10) : 10;
+    const limitNum = Math.min(parsedLimit, 100);
     const skip = (pageNum - 1) * limitNum;
 
     const user = req.session?.user;

@@ -22,7 +22,7 @@ export async function verifyKostOwnership(req: FastifyRequest, reply: FastifyRep
     return;
   }
 
-  let kostId: string | undefined = undefined;
+  const kostIdsToCheck = new Set<string>();
 
   // 1. Resolve kostId from Route Params (e.g., id of Kost, Room, or Resident)
   if (req.params && (req.params as any).id) {
@@ -30,62 +30,85 @@ export async function verifyKostOwnership(req: FastifyRequest, reply: FastifyRep
     const url = req.url;
 
     if (url.includes('/kosts/')) {
-      kostId = id;
+      kostIdsToCheck.add(id);
     } else if (url.includes('/rooms/')) {
       const room = await prisma.room.findUnique({
         where: { id },
         select: { kostId: true }
       });
-      kostId = room?.kostId;
+      if (room?.kostId) {
+        kostIdsToCheck.add(room.kostId);
+      }
     } else if (url.includes('/residents/')) {
       const resident = await prisma.resident.findUnique({
         where: { id },
         select: { kostId: true }
       });
-      kostId = resident?.kostId;
+      if (resident?.kostId) {
+        kostIdsToCheck.add(resident.kostId);
+      }
     }
   }
 
-  // 2. Resolve kostId from Request Body (e.g. creating/updating Rooms or Residents)
-  if (!kostId && req.body) {
-    kostId = (req.body as any).kostId;
+  // 2. Resolve kostId from Request Body (e.g. creating/updating Rooms or Residents, or transferring)
+  if (req.body) {
+    const body = req.body as any;
+    if (body.kostId) {
+      kostIdsToCheck.add(body.kostId);
+    }
 
-    if (!kostId && (req.body as any).roomId) {
+    if (body.roomId) {
       const room = await prisma.room.findUnique({
-        where: { id: (req.body as any).roomId },
+        where: { id: body.roomId },
         select: { kostId: true }
       });
-      kostId = room?.kostId;
+      if (room?.kostId) {
+        kostIdsToCheck.add(room.kostId);
+      }
     }
   }
 
   // 3. Resolve kostId from Query Parameters (e.g. GET /rooms?kostId=...)
-  if (!kostId && req.query) {
-    kostId = (req.query as any).kostId;
+  if (req.query && (req.query as any).kostId) {
+    kostIdsToCheck.add((req.query as any).kostId);
   }
 
-  // If no kostId is resolved, pass to controller (where list-filtering will apply if needed)
-  if (!kostId) {
-    return;
-  }
-
-  // 4. Verify if the user is a manager for this kost
-  const isManager = await prisma.kostManager.findUnique({
-    where: {
-      userId_kostId: {
-        userId: user.id,
-        kostId
-      }
-    }
-  });
-
-  if (!isManager) {
-    return reply.status(403).send({
+  // If creating room or resident, kostId must be present
+  if (kostIdsToCheck.size === 0 && req.method === 'POST') {
+    return reply.status(400).send({
       success: false,
       error: {
-        code: 'FORBIDDEN',
-        message: 'You do not have permission to manage this kost building.'
+        code: 'KOST_ID_REQUIRED',
+        message: 'A valid kostId must be specified for this operation.'
       }
     });
   }
+
+  // If no kostId is resolved for GET/filter operations, pass to controller (where list-filtering applies)
+  if (kostIdsToCheck.size === 0) {
+    return;
+  }
+
+  // 4. Verify user manages EVERY kost building referenced in the request
+  for (const kId of kostIdsToCheck) {
+    const isManager = await prisma.kostManager.findUnique({
+      where: {
+        userId_kostId: {
+          userId: user.id,
+          kostId: kId
+        }
+      }
+    });
+
+    if (!isManager) {
+      return reply.status(403).send({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to manage this kost building.'
+        }
+      });
+    }
+  }
 }
+

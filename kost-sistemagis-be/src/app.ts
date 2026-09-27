@@ -78,7 +78,7 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   });
 
   app.register(fastifyCors, {
-    origin: env.NODE_ENV === 'production' ? ['https://namadomainfrontend.com'] : true,
+    origin: env.NODE_ENV === 'production' ? env.CORS_ORIGIN : true,
     credentials: true
   });
 
@@ -118,12 +118,12 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
 
   // Registrasi Routes
   app.register(authRoutes, { prefix: '/api/auth' });
-  // app.register(dashboardRoutes, { prefix: '/api/v1/dashboard' });
-  // app.register(paymentRoutes, { prefix: '/api/v1/payment' });
-  // app.register(iotRoutes, { prefix: '/api/v1/iot' });
-  // app.register(userRoutes, { prefix: '/api/v1/users' });
-  // app.register(roleRoutes, { prefix: '/api/v1/roles' });
-  // app.register(permissionRoutes, { prefix: '/api/v1/permissions' });
+  app.register(dashboardRoutes, { prefix: '/api/v1/dashboard' });
+  app.register(paymentRoutes, { prefix: '/api/v1/payment' });
+  app.register(iotRoutes, { prefix: '/api/v1/iot' });
+  app.register(userRoutes, { prefix: '/api/v1/users' });
+  app.register(roleRoutes, { prefix: '/api/v1/roles' });
+  app.register(permissionRoutes, { prefix: '/api/v1/permissions' });
   app.register(roomRoutes, { prefix: '/api/v1/rooms' });
   app.register(residentRoutes, { prefix: '/api/v1/residents' });
   app.register(kostRoutes, { prefix: '/api/v1/kosts' });

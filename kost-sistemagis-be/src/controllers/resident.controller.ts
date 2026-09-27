@@ -9,7 +9,8 @@ export const getResidents = async (
     const { page = '1', limit = '10', search, roomId, kostId } = req.query;
 
     const pageNum = parseInt(page, 10) > 0 ? parseInt(page, 10) : 1;
-    const limitNum = parseInt(limit, 10) > 0 ? parseInt(limit, 10) : 10;
+    const parsedLimit = parseInt(limit, 10) > 0 ? parseInt(limit, 10) : 10;
+    const limitNum = Math.min(parsedLimit, 100);
     const skip = (pageNum - 1) * limitNum;
 
     const user = req.session?.user;
@@ -123,7 +124,7 @@ export const createResident = async (
   try {
     const data = req.body;
 
-    // Check if room exists if roomId is provided
+    // Check if room exists if roomId is provided and belongs to the given kost
     if (data.roomId) {
       const room = await prisma.room.findUnique({
         where: { id: data.roomId }
@@ -134,6 +135,15 @@ export const createResident = async (
           error: {
             code: 'ROOM_NOT_FOUND',
             message: 'The assigned room could not be found.'
+          }
+        });
+      }
+      if (room.kostId !== data.kostId) {
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: 'ROOM_KOST_MISMATCH',
+            message: 'The specified room does not belong to the selected kost building.'
           }
         });
       }
@@ -217,6 +227,7 @@ export const updateResident = async (
     }
 
     // Verify room if changing
+    const targetKostId = data.kostId || resident.kostId;
     if (data.roomId && data.roomId !== resident.roomId) {
       const room = await prisma.room.findUnique({
         where: { id: data.roomId }
@@ -227,6 +238,15 @@ export const updateResident = async (
           error: {
             code: 'ROOM_NOT_FOUND',
             message: 'The new assigned room could not be found.'
+          }
+        });
+      }
+      if (room.kostId !== targetKostId) {
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: 'ROOM_KOST_MISMATCH',
+            message: 'The new assigned room does not belong to the resident\'s kost building.'
           }
         });
       }

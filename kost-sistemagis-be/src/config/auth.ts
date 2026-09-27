@@ -12,8 +12,8 @@ export const auth = betterAuth({
     admin(),
     bearer()
   ],
-  secret: process.env.BETTER_AUTH_SECRET || "a-very-secure-secret-key-of-at-least-32-chars",
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+  secret: env.BETTER_AUTH_SECRET,
+  baseURL: env.BETTER_AUTH_URL,
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || "placeholder-client-id",

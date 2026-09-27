@@ -1,9 +1,11 @@
 // src/controllers/iot.controller.ts
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { RfidService } from '../services/rfid.service';
+import { prisma } from '../plugins/database';
 
 interface IotPayload {
   rfidTag?: string;
+  kostId?: string;
 }
 
 export async function manualOpenDoor(
@@ -11,14 +13,34 @@ export async function manualOpenDoor(
   req: FastifyRequest<{ Body: IotPayload }>,
   reply: FastifyReply
 ) {
-  const rfidTag = req.body?.rfidTag || 'TEST_MANUAL';
+  const user = req.session?.user;
+  const rfidTag = req.body?.rfidTag || `MANUAL_${user?.name || 'ADMIN'}`;
+  const kostId = req.body?.kostId;
   const rfidService = new RfidService(this);
 
   try {
     const result = await rfidService.openMainDoor(rfidTag);
-    return reply.send(result);
+
+    // Record audit alert
+    await prisma.systemAlert.create({
+      data: {
+        kostId,
+        type: 'INFO',
+        message: `Pintu utama dibuka manual oleh ${user?.name || 'Administrator'} (Tag: ${rfidTag}).`
+      }
+    });
+
+    return reply.send({
+      success: true,
+      data: {
+        message: result.message,
+        rfidTag,
+        timestamp: new Date().toISOString()
+      }
+    });
   } catch (error) {
-    const errMessage = error instanceof Error ? error.message : 'Unknown error';
-    return reply.status(500).send({ error: errMessage });
+    this.log.error(error as Error, 'Failed to trigger IoT door access');
+    throw error;
   }
 }
+
