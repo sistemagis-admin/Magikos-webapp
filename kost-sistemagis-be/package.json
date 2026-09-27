@@ -10,7 +10,6 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "@better-auth/prisma-adapter": "^1.6.20",
     "@fastify/cors": "^11.2.0",
     "@fastify/helmet": "^13.0.2",
     "@fastify/rate-limit": "^11.0.0",
