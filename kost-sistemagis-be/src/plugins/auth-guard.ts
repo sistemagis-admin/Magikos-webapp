@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { toWebHeaders } from '../utils/headers';
 import { getAuth } from '../config/auth';
-import { Session, User } from 'better-auth';
+import type { Session, User } from 'better-auth';
 
 declare module 'fastify' {
   interface FastifyRequest {
