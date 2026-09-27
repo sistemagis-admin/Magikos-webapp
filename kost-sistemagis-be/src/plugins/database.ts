@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
-import { PrismaClient } from '../generated/prisma';
+import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import 'dotenv/config'; // Ensure dotenv is loaded so process.env.DATABASE_URL is available
