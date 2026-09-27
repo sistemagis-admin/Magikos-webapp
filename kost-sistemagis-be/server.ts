@@ -32,29 +32,19 @@ const start = async () => {
   }
 };
 
-// Start server on standard node environment; Vercel handles invocation serverlessly
-if (!process.env.VERCEL) {
-  start();
-}
+// Start listening: Vercel intercepts this call in production (Fluid Compute) to route traffic
+start();
 
-async function handler(req: any, res: any) {
+const handler = async (req: any, res: any) => {
   await app.ready();
-  const response = await app.inject({
-    method: req.method,
-    url: req.url,
-    headers: req.headers,
-    payload: req.body
-  });
+  app.server.emit('request', req, res);
+};
 
-  if (response.headers) {
-    for (const [key, value] of Object.entries(response.headers)) {
-      if (value !== undefined) {
-        res.setHeader(key, value);
-      }
-    }
-  }
-  res.statusCode = response.statusCode;
-  res.end(response.rawPayload);
+// Support both CommonJS require() and ES Module default import on Vercel
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = handler;
+  (module.exports as any).default = handler;
+  (module.exports as any).app = app;
 }
 
 export default handler;
