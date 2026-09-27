@@ -133,51 +133,61 @@ Sistem autentikasi menggunakan **Better Auth**. Mendukung dua mode:
 
 ### 3.1 Register Akun Pengguna Baru
 ```bash
-curl -X POST "http://localhost:3000/api/auth/sign-up/email" \
+# Production Cloud
+curl -X POST "https://magikos-webapp.vercel.app/api/auth/sign-up/email" \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "manager@sistemagis.com",
+    "email": "user.baru@example.com",
     "password": "Password123!",
-    "name": "Budi Pengelola"
+    "name": "User Baru"
   }'
+
+# Lokal Development
+# curl -X POST "http://localhost:3000/api/auth/sign-up/email" ...
 ```
 
 ### 3.2 Login (Sign-In) & Dapatkan Token
 ```bash
-curl -X POST "http://localhost:3000/api/auth/sign-in/email" \
+# Production Cloud
+curl -X POST "https://magikos-webapp.vercel.app/api/auth/sign-in/email" \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "manager@sistemagis.com",
-    "password": "Password123!"
+    "email": "admin@sistemagis.com",
+    "password": "AdminPassword123!"
   }'
+
+# Lokal Development
+# curl -X POST "http://localhost:3000/api/auth/sign-in/email" ...
 ```
 **Contoh Output Sukses:**
 ```json
 {
   "success": true,
   "data": {
-    "token": "d748f3b2a1c0...",
+    "token": "yEGvzA0HyU60MyILeVQq8OFk2ifOriFp",
     "user": {
       "id": "cm01ab2c3d4e5f6g7h8i9j0",
-      "email": "manager@sistemagis.com",
-      "name": "Budi Pengelola",
+      "email": "admin@sistemagis.com",
+      "name": "Super Admin",
       "role": "admin"
     }
   }
 }
 ```
-*(Simpan nilai `token` untuk digunakan pada request berikutnya).*
+*(Simpan nilai `token` untuk digunakan pada header `Authorization: Bearer <TOKEN>` pada request berikutnya).*
 
 ### 3.3 Cek Profil Sesi Aktif
 Gunakan endpoint ini saat aplikasi FE pertama kali dimuat untuk memvalidasi apakah user masih login.
 ```bash
-curl -X GET "http://localhost:3000/api/auth/get-session" \
+# Production Cloud
+curl -X GET "https://magikos-webapp.vercel.app/api/auth/get-session" \
   -H "Authorization: Bearer <YOUR_SESSION_TOKEN>"
 ```
 
 ### 3.4 Logout (Sign-Out)
 ```bash
-curl -X POST "http://localhost:3000/api/auth/sign-out" \
+# Production Cloud
+curl -X POST "https://magikos-webapp.vercel.app/api/auth/sign-out" \
   -H "Authorization: Bearer <YOUR_SESSION_TOKEN>"
 ```
 
