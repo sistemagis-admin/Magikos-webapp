@@ -1,5 +1,5 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
-import { fromNodeHeaders } from "better-auth/node";
+import { toWebHeaders } from '../utils/headers';
 import { auth } from '../config/auth';
 import { signUpSchema, signInSchema, signOutSchema, getSessionSchema } from './schemas/auth.schema';
 
@@ -9,7 +9,7 @@ import { handlePrismaError } from '../utils/error-handler';
 async function handleBetterAuth(request: FastifyRequest, reply: FastifyReply) {
   try {
     const url = new URL(request.url, `${request.protocol}://${request.headers.host}`);
-    const headers = fromNodeHeaders(request.headers);
+    const headers = toWebHeaders(request.headers);
     
     const req = new Request(url.toString(), {
       method: request.method,
