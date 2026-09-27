@@ -39,7 +39,22 @@ if (!process.env.VERCEL) {
 
 async function handler(req: any, res: any) {
   await app.ready();
-  app.server.emit('request', req, res);
+  const response = await app.inject({
+    method: req.method,
+    url: req.url,
+    headers: req.headers,
+    payload: req.body
+  });
+
+  if (response.headers) {
+    for (const [key, value] of Object.entries(response.headers)) {
+      if (value !== undefined) {
+        res.setHeader(key, value);
+      }
+    }
+  }
+  res.statusCode = response.statusCode;
+  res.end(response.rawPayload);
 }
 
 export default handler;
