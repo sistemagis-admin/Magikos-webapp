@@ -11,18 +11,8 @@ export const errorResponseSchema = {
         code: { type: 'string', example: 'VALIDATION_FAILED' },
         message: { type: 'string', example: 'Invalid request payload format.' },
         details: {
-          type: 'array',
           nullable: true,
-          items: {
-            type: 'object',
-            properties: {
-              keyword: { type: 'string' },
-              instancePath: { type: 'string' },
-              schemaPath: { type: 'string' },
-              params: { type: 'object' },
-              message: { type: 'string' }
-            }
-          }
+          description: 'Detailed validation or internal error information'
         }
       }
     }

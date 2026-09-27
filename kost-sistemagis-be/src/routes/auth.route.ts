@@ -30,13 +30,14 @@ function formatAuthError(error: any, reply: FastifyReply) {
 
   const message = error.body?.message || error.message || 'Authentication error';
   const code = error.body?.code || error.code || 'AUTH_ERROR';
+  const details = error.body?.message || error.message || (typeof error.body === 'object' ? JSON.stringify(error.body) : null);
 
   return reply.status(statusCode).send({
     success: false,
     error: {
       code,
       message,
-      details: error.body || error.message
+      details
     }
   });
 }
