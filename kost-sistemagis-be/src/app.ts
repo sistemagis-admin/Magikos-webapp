@@ -116,6 +116,15 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   app.register(databasePlugin);
   app.register(mqttPlugin);
 
+  // Health Check Endpoint (Render & UptimeRobot)
+  app.get('/health', async (request, reply) => {
+    return reply.status(200).send({
+      status: 'ok',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // Registrasi Routes
   app.register(authRoutes, { prefix: '/api/auth' });
   app.register(dashboardRoutes, { prefix: '/api/v1/dashboard' });
