@@ -8,15 +8,22 @@ Dokumen ini dirancang khusus untuk **Frontend Developer (Web / Mobile)** dan **Q
 
 | Konfigurasi | Nilai Default | Keterangan |
 | :--- | :--- | :--- |
-| **Base URL Lokal** | `http://localhost:3000` | URL utama server backend di lingkungan development |
-| **Interactive Docs (Swagger UI)** | `http://localhost:3000/documentation` | Dokumentasi interaktif OpenAPI (bisa langsung *Try it out*) |
+| **Base URL Cloud (Production)** | `https://magikos-webapp.vercel.app` | **Deployment Live di Vercel (Aktif & Siap Pakai)** |
+| **Interactive Docs (Cloud Swagger)** | `https://magikos-webapp.vercel.app/documentation` | Dokumentasi OpenAPI live dengan fitur *Authorize* Bearer Token |
+| **Base URL Lokal** | `http://localhost:3000` | URL utama server backend di lingkungan development lokal |
+| **Interactive Docs (Lokal)** | `http://localhost:3000/documentation` | Dokumentasi interaktif OpenAPI di localhost |
+| **Akun SuperAdmin Default** | `admin@sistemagis.com` / `AdminPassword123!` | Sudah ter-seed di Neon PostgreSQL Cloud |
 | **Header Wajib (Protected)** | `Authorization: Bearer <TOKEN>` | Token sesi didapat setelah login |
 | **Header Content-Type** | `Content-Type: application/json` | Wajib untuk request dengan method `POST` dan `PATCH` |
 
 > [!TIP]
-> **Environment Variable di Frontend (.env.local):**
+> **Environment Variable di Frontend (.env.local / .env.production):**
 > ```env
-> NEXT_PUBLIC_API_URL=http://localhost:3000
+> # Production (Cloud)
+> NEXT_PUBLIC_API_URL=https://magikos-webapp.vercel.app
+> 
+> # Development (Lokal)
+> # NEXT_PUBLIC_API_URL=http://localhost:3000
 > ```
 
 ---
