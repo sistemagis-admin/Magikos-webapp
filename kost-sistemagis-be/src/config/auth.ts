@@ -4,6 +4,13 @@ import { env } from "./env";
 // Helper to perform true native ESM dynamic import in TypeScript CommonJS runtime
 const dynamicImport = new Function('specifier', 'return import(specifier)') as <T = any>(specifier: string) => Promise<T>;
 
+// Static hints for Vercel Node File Trace (NFT) to bundle ESM packages
+if (false as boolean) {
+  require.resolve('better-auth');
+  require.resolve('better-auth/adapters/prisma');
+  require.resolve('better-auth/plugins');
+}
+
 let authInstance: any = null;
 
 export async function getAuth() {

@@ -1,5 +1,13 @@
 {
   "version": 2,
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "node_modules/better-auth/**"
+    },
+    "api/index.js": {
+      "includeFiles": "node_modules/better-auth/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",
