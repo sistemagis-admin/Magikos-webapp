@@ -1,9 +1,10 @@
 import "dotenv/config";
 import { prisma } from '../src/plugins/database';
-import { auth } from '../src/config/auth';
+import { getAuth } from '../src/config/auth';
 
 async function main() {
   console.log("Starting database seeding...");
+  const auth = await getAuth();
 
   // 1. Clean existing data
   await prisma.systemAlert.deleteMany({});

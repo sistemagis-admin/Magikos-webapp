@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../plugins/database';
-import { auth } from '../config/auth';
+import { getAuth } from '../config/auth';
 
 export const getUsers = async (
   req: FastifyRequest<{ Querystring: { page?: string; limit?: string; search?: string } }>, 
@@ -93,6 +93,7 @@ export const createUser = async (
     // Default password if not provided
     const userPassword = password || 'defaultPassword123!';
     
+    const auth = await getAuth();
     const newAuthUser = await auth.api.signUpEmail({
       body: {
         email,

@@ -1,6 +1,6 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { toWebHeaders } from '../utils/headers';
-import { auth } from '../config/auth';
+import { getAuth } from '../config/auth';
 import { signUpSchema, signInSchema, signOutSchema, getSessionSchema } from './schemas/auth.schema';
 
 import { handlePrismaError } from '../utils/error-handler';
@@ -8,6 +8,7 @@ import { handlePrismaError } from '../utils/error-handler';
 // Helper untuk memproses request menggunakan handler Better Auth
 async function handleBetterAuth(request: FastifyRequest, reply: FastifyReply) {
   try {
+    const auth = await getAuth();
     const url = new URL(request.url, `${request.protocol}://${request.headers.host}`);
     const headers = toWebHeaders(request.headers);
     
@@ -20,7 +21,7 @@ async function handleBetterAuth(request: FastifyRequest, reply: FastifyReply) {
     const response = await auth.handler(req);
 
     // Forward headers
-    response.headers.forEach((value, key) => reply.header(key, value));
+    response.headers.forEach((value: string, key: string) => reply.header(key, value));
 
     // Jika ini adalah redirect (3xx), teruskan secara langsung tanpa diubah
     if (response.status >= 300 && response.status < 400) {
