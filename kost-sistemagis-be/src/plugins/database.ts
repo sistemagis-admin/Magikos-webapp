@@ -28,22 +28,23 @@ const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({ adapter });
 
 const databasePlugin: FastifyPluginAsync = async (fastify, options) => {
-  try {
-    // Membuka koneksi database
-    await prisma.$connect();
-    fastify.log.info('Database PostgreSQL connected via Prisma');
+  // Menambahkan PrismaClient ke instance Fastify (Prisma menghubungkan secara lazy)
+  fastify.decorate('db', prisma);
 
-    // Menambahkan PrismaClient ke instance Fastify
-    fastify.decorate('db', prisma);
-
-    // Memastikan koneksi tertutup saat server dimatikan
-    fastify.addHook('onClose', async (instance) => {
-      await prisma.$disconnect();
-    });
-  } catch (error) {
-    fastify.log.error(error as Error, 'Failed to connect to database via Prisma');
-    throw error;
+  // Pada server konvensional, uji koneksi di awal
+  if (!process.env.VERCEL) {
+    try {
+      await prisma.$connect();
+      fastify.log.info('Database PostgreSQL connected via Prisma');
+    } catch (error) {
+      fastify.log.warn('Could not establish initial database connection, Prisma will reconnect lazily.');
+    }
   }
+
+  // Memastikan koneksi tertutup saat server dimatikan
+  fastify.addHook('onClose', async (instance) => {
+    await prisma.$disconnect();
+  });
 };
 
 export default fp(databasePlugin);
